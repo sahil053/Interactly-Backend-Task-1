@@ -25,8 +25,48 @@ mysqlConnection.connect((err) => {
 // Create Contact
 app.post("/createContact", async (req, res) => {
   try {
-    // Implement logic to create contact in CRM and SQL database
-    // Omitted for brevity
+    const { first_name, last_name, email, mobile_number, work_number, data_store } = req.body;
+
+    if (data_store === "CRM") {
+      const contactData = {
+        contact: {
+          first_name,
+          last_name,
+          email,
+          work_number,
+        },
+      };
+
+      const response = await axios.post(CRM_API_URL, contactData, {
+        headers: {
+          Authorization: "Token SbfMdBeXcgpyuS8oeu9Gwg",
+          "Content-Type": "application/json",
+        },
+      });
+
+      const createdContact = response.data.contact;
+      res.json(createdContact);
+    } else if (data_store === "DATABASE") {
+      const query =
+        "INSERT INTO contacts (first_name, last_name, email, mobile_number, work_number) VALUES (?, ?, ?, ?, ?)";
+      mysqlConnection.query(
+        query,
+        [first_name, last_name, email, mobile_number, work_number],
+        (err, result) => {
+          if (err) {
+            console.error("Error creating contact in database: " + err.stack);
+            res.status(500).json({ error: "Error creating contact in database" });
+            return;
+          }
+          res.json({
+            message: "Contact created in database",
+            contact_id: result.insertId,
+          });
+        }
+      );
+    } else {
+      res.status(400).json({ error: "Invalid data_store parameter" });
+    }
   } catch (error) {
     console.error("Error creating contact:", error.response.data);
     res.status(500).json({ error: "Failed to create contact" });
